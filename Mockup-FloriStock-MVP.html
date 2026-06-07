@@ -189,10 +189,11 @@
 <script>
 /* ============ STATE & PERSISTENCE ============ */
 const KEY='floristock_v1';
-let db, curView='dash', selProd=null, saleQty=1, viewProd=null, recipeDraft=[];
+let db, curView='dash', selProd=null, saleQty=1, viewProd=null, recipeDraft=[], detailB=null;
 
-function seed(){return {
-  bahan:[
+function seed(){
+  const t=Date.now()-86400000*7;
+  const bahan=[
     {id:'b1',nama:'Kawat bulu',emoji:'🧵',satuan:'pcs',stok:600,rop:500,harga:150},
     {id:'b2',nama:'Tangkai',emoji:'🌿',satuan:'pcs',stok:340,rop:100,harga:500},
     {id:'b3',nama:'Kertas tisu',emoji:'📄',satuan:'lembar',stok:80,rop:50,harga:800},
@@ -200,19 +201,23 @@ function seed(){return {
     {id:'b5',nama:'Stik',emoji:'🥢',satuan:'pcs',stok:210,rop:80,harga:300},
     {id:'b6',nama:'Pita satin',emoji:'🎀',satuan:'meter',stok:50,rop:20,harga:2500},
     {id:'b7',nama:'Mawar fresh',emoji:'🌹',satuan:'tangkai',stok:180,rop:60,harga:4000}
-  ],
-  produk:[
-    {id:'p1',nama:'Mawar satuan',emoji:'🌹',harga:25000,resep:[{tipe:'bahan',ref:'b1',qty:9},{tipe:'bahan',ref:'b2',qty:1}]},
-    {id:'p2',nama:'Bouquet S',emoji:'💐',harga:150000,resep:[{tipe:'produk',ref:'p1',qty:5},{tipe:'bahan',ref:'b3',qty:2},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b5',qty:3},{tipe:'bahan',ref:'b6',qty:1}]},
-    {id:'p3',nama:'Bouquet M',emoji:'🌸',harga:275000,resep:[{tipe:'produk',ref:'p1',qty:10},{tipe:'bahan',ref:'b3',qty:4},{tipe:'bahan',ref:'b4',qty:2},{tipe:'bahan',ref:'b6',qty:2}]},
-    {id:'p4',nama:'Box Bunga',emoji:'🎁',harga:320000,resep:[{tipe:'bahan',ref:'b7',qty:12},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b6',qty:1}]}
-  ],
-  jual:[]
-};}
+  ];
+  return {
+    bahan,
+    produk:[
+      {id:'p1',nama:'Mawar satuan',emoji:'🌹',harga:25000,resep:[{tipe:'bahan',ref:'b1',qty:9},{tipe:'bahan',ref:'b2',qty:1}]},
+      {id:'p2',nama:'Bouquet S',emoji:'💐',harga:150000,resep:[{tipe:'produk',ref:'p1',qty:5},{tipe:'bahan',ref:'b3',qty:2},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b5',qty:3},{tipe:'bahan',ref:'b6',qty:1}]},
+      {id:'p3',nama:'Bouquet M',emoji:'🌸',harga:275000,resep:[{tipe:'produk',ref:'p1',qty:10},{tipe:'bahan',ref:'b3',qty:4},{tipe:'bahan',ref:'b4',qty:2},{tipe:'bahan',ref:'b6',qty:2}]},
+      {id:'p4',nama:'Box Bunga',emoji:'🎁',harga:320000,resep:[{tipe:'bahan',ref:'b7',qty:12},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b6',qty:1}]}
+    ],
+    jual:[],
+    mutasi:bahan.map((b,i)=>({id:'m'+i,ts:t,bahanId:b.id,jenis:'awal',delta:b.stok,ket:'Stok awal'}))
+  };
+}
 
-function load(){try{db=JSON.parse(localStorage.getItem(KEY))||seed();}catch(e){db=seed();} if(!db.bahan){db=seed();}}
+function load(){try{db=JSON.parse(localStorage.getItem(KEY))||seed();}catch(e){db=seed();} if(!db.bahan){db=seed();} if(!db.mutasi)db.mutasi=[];}
 function save(){localStorage.setItem(KEY,JSON.stringify(db));}
-function resetData(){if(confirm('Kembalikan ke data contoh? Semua perubahan terhapus.')){db=seed();save();selProd=null;viewProd=null;renderAll();toast('Data dikembalikan ke contoh.');}}
+function resetData(){if(confirm('Kembalikan ke data contoh? Semua perubahan terhapus.')){db=seed();save();selProd=null;viewProd=null;detailB=null;renderAll();toast('Data dikembalikan ke contoh.');}}
 
 /* ============ HELPERS ============ */
 const rp=n=>'Rp '+Number(Math.round(n)).toLocaleString('id-ID');
@@ -220,6 +225,7 @@ const getB=id=>db.bahan.find(b=>b.id===id);
 const getP=id=>db.produk.find(p=>p.id===id);
 const uid=p=>p+Math.random().toString(36).slice(2,7);
 function statusOf(b){if(b.stok<=b.rop*0.5)return['crit','Kritis'];if(b.stok<=b.rop)return['low','Menipis'];return['ok','Aman'];}
+function logMut(bahanId,jenis,delta,ket){db.mutasi.push({id:uid('m'),ts:Date.now(),bahanId,jenis,delta,ket});}
 
 /* Recursive BOM explosion -> {bahanId: totalQty} */
 function explode(prodId,mult,acc,guard){acc=acc||{};guard=guard||{};
@@ -315,7 +321,7 @@ function saveSale(){
   const m=explode(selProd,saleQty);
   const kurang=Object.keys(m).filter(id=>getB(id).stok-m[id]<0);
   if(kurang.length){toast('Stok tidak cukup: '+kurang.map(id=>getB(id).nama).join(', '),true);return;}
-  Object.keys(m).forEach(id=>{getB(id).stok-=m[id];});
+  Object.keys(m).forEach(id=>{getB(id).stok-=m[id];logMut(id,'keluar',-m[id],'Penjualan '+saleQty+'× '+p.nama);});
   db.jual.push({id:uid('s'),ts:Date.now(),prod:selProd,qty:saleQty,total:p.harga*saleQty});
   save();const n=saleQty;saleQty=1;renderAll();
   toast('✓ Terjual '+n+'× '+p.nama+' — stok bahan terpotong otomatis!');
@@ -346,12 +352,60 @@ function renderResep(){
 function delRecipe(pid,i){const p=getP(pid);p.resep.splice(i,1);save();renderResep();toast('Komponen resep dihapus.');}
 
 function renderBahan(){
-  const rows=db.bahan.map(b=>{const[c,t]=statusOf(b);return `<tr><td>${b.emoji} ${b.nama}</td><td>${b.satuan}</td><td><b>${b.stok}</b></td><td>${b.rop}</td><td>${rp(b.harga)}</td><td><span class="pill ${c}">${t}</span></td>
-    <td style="white-space:nowrap"><button class="btn ghost sm" onclick="openModal('beli','${b.id}')">+ Beli</button> <button class="btn ghost sm" onclick="openModal('adjust','${b.id}')">Koreksi</button></td></tr>`;}).join('');
+  if(detailB&&getB(detailB)){renderDetailBahan();return;}
+  const rows=db.bahan.map(b=>{const[c,t]=statusOf(b);return `<tr><td><span style="cursor:pointer;color:var(--rose-dk);font-weight:600" onclick="openDetail('${b.id}')">${b.emoji} ${b.nama}</span></td><td>${b.satuan}</td><td><b>${b.stok}</b></td><td>${b.rop}</td><td>${rp(b.harga)}</td><td><span class="pill ${c}">${t}</span></td>
+    <td style="white-space:nowrap"><button class="btn ghost sm" onclick="openDetail('${b.id}')">Detail</button> <button class="btn ghost sm" onclick="openModal('beli','${b.id}')">+ Beli</button> <button class="btn ghost sm" onclick="openModal('adjust','${b.id}')">Koreksi</button></td></tr>`;}).join('');
   document.getElementById('bahan').innerHTML=`
-    <div class="topbar"><div><h1>Stok Bahan</h1><p>Sisa stok real-time, otomatis ter-update tiap penjualan & pembelian.</p></div><button class="btn primary" onclick="openModal('bahan')">+ Bahan Baru</button></div>
+    <div class="topbar"><div><h1>Stok Bahan</h1><p>Klik nama bahan untuk lihat detail. Sisa stok otomatis ter-update tiap penjualan & pembelian.</p></div><button class="btn primary" onclick="openModal('bahan')">+ Bahan Baru</button></div>
     <div class="panel"><div class="table-wrap"><table><tr><th>Bahan</th><th>Satuan</th><th>Sisa</th><th>Pesan ulang</th><th>Harga beli</th><th>Status</th><th></th></tr>
     ${rows||'<tr><td colspan="7" class="empty">Belum ada bahan.</td></tr>'}</table></div></div>`;
+}
+function openDetail(id){detailB=id;go('bahan',document.querySelector('.nav button[data-s=bahan]'));}
+function closeDetail(){detailB=null;renderBahan();}
+function renderDetailBahan(){
+  const b=getB(detailB);const[c,t]=statusOf(b);
+  // dipakai di produk apa saja (per 1 produk, termasuk nested)
+  const dipakai=db.produk.map(p=>({p,q:explode(p.id,1)[b.id]||0})).filter(x=>x.q>0);
+  // total terpakai dari penjualan
+  let terpakai=0;db.jual.forEach(s=>{terpakai+=explode(s.prod,s.qty)[b.id]||0;});
+  // riwayat mutasi
+  const muts=db.mutasi.filter(m=>m.bahanId===b.id).sort((a,b2)=>b2.ts-a.ts);
+  const badge={awal:['ok','Awal'],masuk:['ok','Masuk'],keluar:['crit','Keluar'],koreksi:['low','Koreksi']};
+  document.getElementById('bahan').innerHTML=`
+    <div class="topbar"><div>
+      <button class="btn ghost sm" onclick="closeDetail()">← Kembali</button>
+      <h1 style="margin-top:10px">${b.emoji} ${b.nama}</h1><p>Detail bahan & riwayat pergerakan stok</p>
+    </div><div style="display:flex;gap:8px"><button class="btn primary" onclick="openModal('beli','${b.id}')">+ Beli</button><button class="btn ghost" onclick="openModal('adjust','${b.id}')">Koreksi</button></div></div>
+
+    <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+      <div class="card"><div class="lbl">Sisa stok</div><div class="val">${b.stok} <small style="font-size:13px;color:var(--muted)">${b.satuan}</small></div><div class="sub"><span class="pill ${c}">${t}</span></div></div>
+      <div class="card"><div class="lbl">Titik pesan ulang</div><div class="val">${b.rop}</div><div class="sub">batas restock</div></div>
+      <div class="card"><div class="lbl">Harga beli</div><div class="val" style="font-size:18px">${rp(b.harga)}</div><div class="sub">per ${b.satuan}</div></div>
+      <div class="card"><div class="lbl">Nilai stok</div><div class="val" style="font-size:18px">${rp(b.stok*b.harga)}</div><div class="sub">sisa × harga</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Dipakai di produk <span class="tag">per 1 produk</span></h3>
+        <div class="table-wrap"><table><tr><th>Produk</th><th>Butuh</th></tr>
+        ${dipakai.length?dipakai.map(x=>`<tr><td>${x.p.emoji} ${x.p.nama}</td><td><b>${x.q}</b> ${b.satuan}</td></tr>`).join(''):'<tr><td colspan="2" class="empty">Belum dipakai di resep manapun.</td></tr>'}
+        </table></div>
+        <div class="note">Termasuk pemakaian lewat resep bertingkat (produk di dalam produk).</div>
+      </div>
+      <div class="panel">
+        <h3>Total terpakai</h3>
+        <div class="val" style="font-family:Georgia,serif;font-size:28px;color:var(--rose-dk)">${terpakai} <small style="font-size:14px;color:var(--muted)">${b.satuan}</small></div>
+        <div class="sub" style="color:var(--muted);margin-top:4px">dari ${db.jual.length} transaksi penjualan</div>
+        <div class="note">Estimasi biaya bahan terpakai ≈ <b>${rp(terpakai*b.harga)}</b></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Riwayat keluar-masuk <span class="tag">${muts.length} catatan</span></h3>
+      <div class="table-wrap"><table><tr><th>Waktu</th><th>Jenis</th><th>Perubahan</th><th>Keterangan</th></tr>
+      ${muts.length?muts.map(m=>{const[bc,bt]=badge[m.jenis]||['ok',m.jenis];const sign=m.delta>0?'+':'';return `<tr><td style="white-space:nowrap">${new Date(m.ts).toLocaleDateString('id-ID',{day:'numeric',month:'short'})} ${new Date(m.ts).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</td><td><span class="pill ${bc}">${bt}</span></td><td style="font-weight:700;color:${m.delta<0?'var(--red)':'var(--green)'}">${sign}${m.delta} ${b.satuan}</td><td>${m.ket||'-'}</td></tr>`;}).join(''):'<tr><td colspan="4" class="empty">Belum ada pergerakan stok.</td></tr>'}
+      </table></div>
+    </div>`;
 }
 
 function renderLapor(){
@@ -409,7 +463,8 @@ function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
 function submitModal(){
   if(modalType==='bahan'){
     if(!v('f_nama')){toast('Nama bahan wajib diisi.',true);return;}
-    db.bahan.push({id:uid('b'),nama:v('f_nama'),emoji:v('f_emoji')||'📦',satuan:v('f_sat')||'pcs',stok:+v('f_stok')||0,rop:+v('f_rop')||0,harga:+v('f_harga')||0});
+    const nb={id:uid('b'),nama:v('f_nama'),emoji:v('f_emoji')||'📦',satuan:v('f_sat')||'pcs',stok:+v('f_stok')||0,rop:+v('f_rop')||0,harga:+v('f_harga')||0};
+    db.bahan.push(nb);if(nb.stok)logMut(nb.id,'awal',nb.stok,'Stok awal');
     save();toast('✓ Bahan "'+v('f_nama')+'" ditambahkan!');
   }else if(modalType==='produk'){
     if(!v('f_nama')){toast('Nama produk wajib diisi.',true);return;}
@@ -417,9 +472,9 @@ function submitModal(){
     viewProd=id;save();toast('✓ Produk "'+v('f_nama')+'" dibuat — tambahkan resepnya!');
   }else if(modalType==='beli'){
     const b=getB(modalRef);const q=+v('f_qty')||0;if(q<=0){toast('Jumlah harus > 0.',true);return;}
-    b.stok+=q;save();toast('✓ Stok '+b.nama+' +'+q+' → sekarang '+b.stok+' '+b.satuan);
+    b.stok+=q;logMut(b.id,'masuk',q,'Pembelian / restock');save();toast('✓ Stok '+b.nama+' +'+q+' → sekarang '+b.stok+' '+b.satuan);
   }else if(modalType==='adjust'){
-    const b=getB(modalRef);b.stok=+v('f_real')||0;save();toast('✓ Stok '+b.nama+' dikoreksi → '+b.stok+' '+b.satuan);
+    const b=getB(modalRef);const baru=+v('f_real')||0;const delta=baru-b.stok;b.stok=baru;if(delta)logMut(b.id,'koreksi',delta,'Koreksi stok / opname');save();toast('✓ Stok '+b.nama+' dikoreksi → '+b.stok+' '+b.satuan);
   }else if(modalType==='reseprow'){
     const[tipe,ref]=v('f_komp').split(':');const q=+v('f_qty')||1;
     getP(modalRef).resep.push({tipe,ref,qty:q});save();toast('✓ Komponen ditambahkan ke resep.');
