@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FloriStock — Mockup MVP</title>
+<title>FloriStock — Otomasi Stok Florist</title>
 <style>
   :root{
     --blush:#fbeef0; --rose:#c8546b; --rose-dk:#9e3b50; --rose-soft:#f3d3da;
@@ -12,9 +12,16 @@
     --shadow:0 8px 30px rgba(158,59,80,.10);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%}
   h1,h2,h3{font-family:Georgia,'Times New Roman',serif;font-weight:600;letter-spacing:.2px}
   .app{display:flex;min-height:100vh}
+
+  /* Mobile top bar (hidden on desktop) */
+  .mtop{display:none;position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;align-items:center;gap:12px}
+  .mtop .burger{font-size:22px;background:none;border:0;cursor:pointer;color:var(--rose);line-height:1}
+  .mtop b{font-family:Georgia,serif;font-size:17px}
+  .backdrop{display:none;position:fixed;inset:0;background:rgba(58,43,47,.4);z-index:44}
+  .backdrop.show{display:block}
 
   /* Sidebar */
   .sidebar{width:240px;background:linear-gradient(180deg,#fff 0%,#fdf3f5 100%);border-right:1px solid var(--line);padding:26px 16px;position:sticky;top:0;height:100vh;flex-shrink:0}
@@ -26,11 +33,12 @@
   .nav button:hover{background:var(--blush)}
   .nav button.active{background:var(--rose);color:#fff;box-shadow:var(--shadow)}
   .nav .ic{font-size:17px;width:20px;text-align:center}
-  .sidebar .foot{position:absolute;bottom:22px;left:16px;right:16px;font-size:11px;color:var(--muted);padding:12px;background:var(--blush);border-radius:11px}
+  .reset{position:absolute;bottom:18px;left:16px;right:16px;font-size:12px;color:var(--muted);background:var(--blush);border:0;border-radius:11px;padding:11px;cursor:pointer;text-align:center}
+  .reset:hover{color:var(--rose-dk)}
 
   /* Main */
-  .main{flex:1;padding:28px 34px;max-width:1100px}
-  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+  .main{flex:1;padding:28px 34px;max-width:1100px;width:100%}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:14px;flex-wrap:wrap}
   .topbar h1{font-size:25px}
   .topbar p{color:var(--muted);margin-top:3px}
   .userchip{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);padding:7px 13px;border-radius:30px}
@@ -40,320 +48,390 @@
   .screen.show{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  /* Cards */
   .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
   .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
   .card .lbl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
-  .card .val{font-size:26px;font-family:Georgia,serif;margin-top:8px}
-  .card .sub{font-size:11px;margin-top:5px}
-  .up{color:var(--green)} .down{color:var(--red)}
+  .card .val{font-size:24px;font-family:Georgia,serif;margin-top:8px}
+  .card .sub{font-size:11px;margin-top:5px;color:var(--muted)}
 
   .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
   .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
-  .panel h3{font-size:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+  .panel h3{font-size:16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   .panel h3 .tag{font-family:'Segoe UI';font-size:11px;font-weight:400;color:var(--muted)}
 
-  table{width:100%;border-collapse:collapse}
-  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line)}
-  td{padding:11px 10px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;min-width:340px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
   tr:last-child td{border-bottom:0}
-  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
   .pill.ok{background:var(--green-bg);color:var(--green)}
   .pill.low{background:var(--amber-bg);color:var(--amber)}
   .pill.crit{background:var(--red-bg);color:var(--red)}
-  .bar{height:7px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:6px;width:120px}
+  .bar{height:7px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:6px;width:110px;max-width:40vw}
   .bar > i{display:block;height:100%;border-radius:5px}
 
-  /* Buttons & forms */
   .btn{border:0;border-radius:11px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
   .btn.primary{background:var(--rose);color:#fff;box-shadow:var(--shadow)}
   .btn.primary:hover{background:var(--rose-dk)}
   .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
   .btn.sm{padding:7px 13px;font-size:12.5px}
-  select,input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit}
+  .btn.danger{background:var(--red-bg);color:var(--red)}
+  select,input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:16px;background:#fff;color:var(--ink);font-family:inherit}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;font-weight:600}
   .field{margin-bottom:15px}
+  .empty{color:var(--muted);text-align:center;padding:24px;font-size:13px}
 
   .prodgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .prod{border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;text-align:center;transition:.15s;background:#fff}
   .prod:hover{border-color:var(--rose-soft);transform:translateY(-2px)}
   .prod.sel{border-color:var(--rose);background:var(--blush);box-shadow:var(--shadow)}
   .prod .emo{font-size:30px}
-  .prod .nm{font-weight:600;margin-top:7px}
+  .prod .nm{font-weight:600;margin-top:7px;font-size:13.5px}
   .prod .pr{color:var(--rose);font-size:12.5px;margin-top:2px}
 
   .deduct{background:var(--blush);border:1px dashed var(--rose-soft);border-radius:14px;padding:16px;margin-top:6px}
-  .deduct .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #eccfd6;font-size:13.5px}
+  .deduct .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #eccfd6;font-size:13.5px;gap:8px}
   .deduct .row:last-child{border-bottom:0}
-  .deduct .neg{color:var(--rose-dk);font-weight:700}
+  .deduct .neg{color:var(--rose-dk);font-weight:700;white-space:nowrap}
+  .deduct .short{color:var(--red);font-weight:700}
   .badge-auto{background:var(--green);color:#fff;font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.4px}
-  .qty{display:flex;align-items:center;gap:0;width:130px}
-  .qty button{width:36px;height:40px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:18px;color:var(--rose)}
+  .qty{display:flex;align-items:center;gap:0;width:140px}
+  .qty button{width:40px;height:44px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:18px;color:var(--rose)}
   .qty button:first-child{border-radius:11px 0 0 11px}
   .qty button:last-child{border-radius:0 11px 11px 0}
   .qty input{text-align:center;border-radius:0;border-left:0;border-right:0}
 
-  .recipe-row{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:11px;margin-bottom:8px}
-  .recipe-row .nm{flex:1}
-  .recipe-row.nest{border-left:3px solid var(--rose-soft);margin-left:18px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--rose)}
+  .recipe-row{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:11px;margin-bottom:8px;flex-wrap:wrap}
+  .recipe-row .nm{flex:1;min-width:120px}
+  .recipe-row.nest{margin-left:18px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--rose)}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
-  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#fff;padding:14px 24px;border-radius:30px;box-shadow:var(--shadow);font-weight:600;opacity:0;transition:.35s;z-index:50}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--green);color:#fff;padding:14px 22px;border-radius:30px;box-shadow:var(--shadow);font-weight:600;z-index:80;max-width:90vw;text-align:center;opacity:0;transition:.35s}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.err{background:var(--red)}
   .hint{display:inline-block;background:#fff;border:1px dashed var(--rose-soft);color:var(--rose-dk);font-size:11px;padding:4px 10px;border-radius:20px;margin-bottom:14px}
 
-  /* Modal */
-  .overlay{position:fixed;inset:0;background:rgba(58,43,47,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .overlay{position:fixed;inset:0;background:rgba(58,43,47,.45);display:none;align-items:center;justify-content:center;z-index:90;padding:16px}
   .overlay.show{display:flex;animation:fade .2s ease}
-  .modal{background:#fff;border-radius:20px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(158,59,80,.3);overflow:hidden;animation:pop .25s ease}
+  .modal{background:#fff;border-radius:20px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(158,59,80,.3);overflow:hidden;animation:pop .25s ease;max-height:92vh;display:flex;flex-direction:column}
   @keyframes pop{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
-  .modal .head{background:linear-gradient(135deg,var(--rose),var(--rose-dk));color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center}
-  .modal .head h3{color:#fff;font-size:18px}
+  .modal .head{background:linear-gradient(135deg,var(--rose),var(--rose-dk));color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}
+  .modal .head h3{color:#fff;font-size:17px}
   .modal .head .x{background:rgba(255,255,255,.2);border:0;color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer}
-  .modal .body{padding:22px 24px;max-height:65vh;overflow:auto}
-  .modal .foot{padding:16px 24px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+  .modal .body{padding:20px 22px;overflow:auto}
+  .modal .foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .reciteml{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .reciteml select{flex:1}
+  .reciteml input{width:80px}
+  .reciteml .del{background:var(--red-bg);color:var(--red);border:0;border-radius:9px;width:38px;height:42px;cursor:pointer;font-size:16px;flex-shrink:0}
+
+  @media(max-width:760px){
+    .mtop{display:flex}
+    .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:45;transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.15)}
+    .sidebar.open{transform:translateX(0)}
+    .main{padding:18px 16px}
+    .topbar h1{font-size:21px}
+    .userchip{display:none}
+    .cards{grid-template-columns:repeat(2,1fr);gap:11px}
+    .card .val{font-size:20px}
+    .grid2{grid-template-columns:1fr}
+    .prodgrid{grid-template-columns:repeat(2,1fr)}
+    .row2{grid-template-columns:1fr}
+  }
+  @media(max-width:380px){.cards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<div class="mtop">
+  <button class="burger" onclick="toggleNav()">☰</button>
+  <div class="brand" style="border:0;margin:0;padding:0"><div class="logo">🌹</div><b>FloriStock</b></div>
+</div>
+<div class="backdrop" id="backdrop" onclick="toggleNav()"></div>
+
 <div class="app">
-  <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="logo">🌹</div>
       <div><b>FloriStock</b><small>Otomasi Stok Florist</small></div>
     </div>
     <nav class="nav">
-      <button class="active" onclick="go('dash',this)"><span class="ic">📊</span> Dashboard</button>
-      <button onclick="go('jual',this)"><span class="ic">🛒</span> Input Penjualan</button>
-      <button onclick="go('resep',this)"><span class="ic">📋</span> Produk &amp; Resep</button>
-      <button onclick="go('bahan',this)"><span class="ic">🧵</span> Stok Bahan</button>
-      <button onclick="go('lapor',this)"><span class="ic">📈</span> Laporan</button>
+      <button class="active" data-s="dash" onclick="go('dash',this)"><span class="ic">📊</span> Dashboard</button>
+      <button data-s="jual" onclick="go('jual',this)"><span class="ic">🛒</span> Input Penjualan</button>
+      <button data-s="resep" onclick="go('resep',this)"><span class="ic">📋</span> Produk &amp; Resep</button>
+      <button data-s="bahan" onclick="go('bahan',this)"><span class="ic">🧵</span> Stok Bahan</button>
+      <button data-s="lapor" onclick="go('lapor',this)"><span class="ic">📈</span> Laporan</button>
     </nav>
+    <button class="reset" onclick="resetData()">↺ Reset data contoh</button>
   </aside>
 
-  <!-- Main -->
   <main class="main">
-    <!-- ============ DASHBOARD ============ -->
-    <section id="dash" class="screen show">
-      <div class="topbar">
-        <div><h1>Selamat datang, Kak 🌷</h1><p>Ringkasan toko bunga kamu hari ini — Sabtu, 6 Juni 2026</p></div>
-        <div class="userchip"><div class="avatar">F</div><div><b style="font-size:13px">Toko Bunga Melati</b><br><small style="color:var(--muted)">Admin</small></div></div>
-      </div>
-      <div class="cards">
-        <div class="card"><div class="lbl">🛒 Penjualan hari ini</div><div class="val">Rp 1.250.000</div><div class="sub up">▲ 18% dari kemarin</div></div>
-        <div class="card"><div class="lbl">📦 Produk terjual</div><div class="val">23</div><div class="sub up">▲ 5 bouquet</div></div>
-        <div class="card"><div class="lbl">🧵 Total bahan</div><div class="val">42</div><div class="sub" style="color:var(--muted)">jenis bahan dipantau</div></div>
-        <div class="card"><div class="lbl">⚠️ Bahan menipis</div><div class="val" style="color:var(--amber)">5</div><div class="sub down">perlu segera dibeli</div></div>
-      </div>
-      <div class="grid2">
-        <div class="panel">
-          <h3>Bahan perlu restock <span class="tag">≤ titik pesan ulang</span></h3>
-          <table>
-            <tr><th>Bahan</th><th>Sisa</th><th>Status</th><th></th></tr>
-            <tr><td>Kawat bulu</td><td>120 pcs <div class="bar"><i style="width:18%;background:var(--red)"></i></div></td><td><span class="pill crit">Kritis</span></td><td><button class="btn ghost sm" onclick="openModal('beli','Kawat bulu')">+ Beli</button></td></tr>
-            <tr><td>Cellophane</td><td>15 lembar <div class="bar"><i style="width:30%;background:var(--amber)"></i></div></td><td><span class="pill low">Menipis</span></td><td><button class="btn ghost sm" onclick="openModal('beli','Cellophane')">+ Beli</button></td></tr>
-            <tr><td>Pita satin merah</td><td>4 meter <div class="bar"><i style="width:22%;background:var(--red)"></i></div></td><td><span class="pill crit">Kritis</span></td><td><button class="btn ghost sm" onclick="openModal('beli','Pita satin merah')">+ Beli</button></td></tr>
-            <tr><td>Kertas tisu</td><td>30 lembar <div class="bar"><i style="width:38%;background:var(--amber)"></i></div></td><td><span class="pill low">Menipis</span></td><td><button class="btn ghost sm" onclick="openModal('beli','Kertas tisu')">+ Beli</button></td></tr>
-          </table>
-        </div>
-        <div class="panel">
-          <h3>Produk terlaris minggu ini</h3>
-          <table>
-            <tr><th>Produk</th><th>Terjual</th></tr>
-            <tr><td>🌹 Bouquet S</td><td><b>34</b></td></tr>
-            <tr><td>💐 Bouquet M</td><td><b>21</b></td></tr>
-            <tr><td>🌹 Mawar satuan</td><td><b>96</b></td></tr>
-            <tr><td>🎁 Box Bunga</td><td><b>12</b></td></tr>
-          </table>
-          <div class="note">💡 Otomatis dihitung dari transaksi penjualan — tanpa rekap manual.</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ INPUT PENJUALAN ============ -->
-    <section id="jual" class="screen">
-      <div class="topbar">
-        <div><h1>Input Penjualan</h1><p>Pilih produk → jumlah → simpan. Stok bahan terpotong otomatis.</p></div>
-      </div>
-      <div class="grid2">
-        <div class="panel">
-          <h3>1 · Pilih produk</h3>
-          <div class="prodgrid">
-            <div class="prod" onclick="pick('mawar',this)"><div class="emo">🌹</div><div class="nm">Mawar satuan</div><div class="pr">Rp 25.000</div></div>
-            <div class="prod sel" onclick="pick('bs',this)"><div class="emo">💐</div><div class="nm">Bouquet S</div><div class="pr">Rp 150.000</div></div>
-            <div class="prod" onclick="pick('bm',this)"><div class="emo">🌸</div><div class="nm">Bouquet M</div><div class="pr">Rp 275.000</div></div>
-            <div class="prod" onclick="pick('box',this)"><div class="emo">🎁</div><div class="nm">Box Bunga</div><div class="pr">Rp 320.000</div></div>
-            <div class="prod" onclick="pick('tulip',this)"><div class="emo">🌷</div><div class="nm">Tulip satuan</div><div class="pr">Rp 35.000</div></div>
-            <div class="prod" onclick="pick('papan',this)"><div class="emo">🪷</div><div class="nm">Papan Bunga</div><div class="pr">Rp 450.000</div></div>
-          </div>
-          <div class="field" style="margin-top:18px">
-            <label>2 · Jumlah</label>
-            <div class="qty"><button onclick="qstep(-1)">−</button><input id="qty" value="1" readonly><button onclick="qstep(1)">+</button></div>
-          </div>
-          <button class="btn primary" style="width:100%" onclick="saveSale()">✓ Simpan Penjualan</button>
-        </div>
-        <div class="panel">
-          <h3>Pratinjau potong stok <span class="badge-auto">OTOMATIS</span></h3>
-          <p style="color:var(--muted);font-size:12.5px;margin-bottom:8px">Bahan yang akan berkurang dari <b id="pname">Bouquet S</b> (termasuk resep bertingkat):</p>
-          <div class="deduct" id="deduct"></div>
-          <div class="note" id="nestnote"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ PRODUK & RESEP ============ -->
-    <section id="resep" class="screen">
-      <div class="topbar">
-        <div><h1>Produk &amp; Resep (BOM)</h1><p>Atur sekali, dipakai selamanya. Tiap produk punya resep bahan penyusun.</p></div>
-        <button class="btn primary" onclick="openModal('produk')">+ Produk Baru</button>
-      </div>
-      <div class="panel">
-        <span class="hint">📋 Sedang melihat resep: <b>Bouquet S</b> — Rp 150.000</span>
-        <h3>Resep penyusun <span class="tag">7 komponen</span></h3>
-        <div class="recipe-row"><span style="font-size:18px">🌹</span><span class="nm"><b>Mawar satuan</b> <small style="color:var(--muted)">(produk — punya resep sendiri)</small></span><span><b>5</b> tangkai</span><button class="btn ghost sm">Edit</button></div>
-        <div class="recipe-row nest"><span style="font-size:15px">↳ 🧵</span><span class="nm">Kawat bulu</span><span><b>9</b> pcs × 5</span></div>
-        <div class="recipe-row nest"><span style="font-size:15px">↳ 🌿</span><span class="nm">Tangkai</span><span><b>1</b> pcs × 5</span></div>
-        <div class="recipe-row"><span style="font-size:18px">📄</span><span class="nm"><b>Kertas tisu</b></span><span><b>2</b> lembar</span><button class="btn ghost sm">Edit</button></div>
-        <div class="recipe-row"><span style="font-size:18px">✨</span><span class="nm"><b>Cellophane</b></span><span><b>1</b> lembar</span><button class="btn ghost sm">Edit</button></div>
-        <div class="recipe-row"><span style="font-size:18px">🥢</span><span class="nm"><b>Stik</b></span><span><b>3</b> pcs</span><button class="btn ghost sm">Edit</button></div>
-        <div class="recipe-row"><span style="font-size:18px">🎀</span><span class="nm"><b>Pita satin</b></span><span><b>1</b> meter</span><button class="btn ghost sm">Edit</button></div>
-        <button class="btn ghost sm" style="margin-top:8px">+ Tambah bahan ke resep</button>
-        <div class="note">🔁 <b>Resep bertingkat:</b> Bouquet S memakai 5 "Mawar", dan tiap Mawar sendiri butuh 9 kawat bulu + 1 tangkai. Saat Bouquet S terjual, sistem otomatis menurunkan semuanya: <b>45 kawat bulu + 5 tangkai</b> + bahan pembungkus. Inilah yang biasanya bikin keteteran kalau manual.</div>
-      </div>
-    </section>
-
-    <!-- ============ STOK BAHAN ============ -->
-    <section id="bahan" class="screen">
-      <div class="topbar">
-        <div><h1>Stok Bahan</h1><p>Sisa stok real-time, otomatis ter-update tiap penjualan &amp; pembelian.</p></div>
-        <button class="btn primary" onclick="openModal('bahan')">+ Bahan Baru</button>
-      </div>
-      <div class="panel">
-        <table id="bahanTable">
-          <tr><th>Bahan</th><th>Satuan</th><th>Sisa stok</th><th>Titik pesan ulang</th><th>Harga beli</th><th>Status</th></tr>
-          <tr><td>🧵 Kawat bulu</td><td>pcs</td><td><b>120</b></td><td>500</td><td>Rp 150</td><td><span class="pill crit">Kritis</span></td></tr>
-          <tr><td>🌿 Tangkai</td><td>pcs</td><td><b>340</b></td><td>100</td><td>Rp 500</td><td><span class="pill ok">Aman</span></td></tr>
-          <tr><td>📄 Kertas tisu</td><td>lembar</td><td><b>30</b></td><td>50</td><td>Rp 800</td><td><span class="pill low">Menipis</span></td></tr>
-          <tr><td>✨ Cellophane</td><td>lembar</td><td><b>15</b></td><td>40</td><td>Rp 1.200</td><td><span class="pill low">Menipis</span></td></tr>
-          <tr><td>🥢 Stik</td><td>pcs</td><td><b>210</b></td><td>80</td><td>Rp 300</td><td><span class="pill ok">Aman</span></td></tr>
-          <tr><td>🎀 Pita satin merah</td><td>meter</td><td><b>4</b></td><td>20</td><td>Rp 2.500</td><td><span class="pill crit">Kritis</span></td></tr>
-          <tr><td>🌹 Mawar fresh</td><td>tangkai</td><td><b>180</b></td><td>60</td><td>Rp 4.000</td><td><span class="pill ok">Aman</span></td></tr>
-        </table>
-      </div>
-    </section>
-
-    <!-- ============ LAPORAN ============ -->
-    <section id="lapor" class="screen">
-      <div class="topbar"><div><h1>Laporan</h1><p>Penjualan, pemakaian bahan, dan estimasi modal — sekali klik.</p></div></div>
-      <div class="cards">
-        <div class="card"><div class="lbl">Penjualan bulan ini</div><div class="val">Rp 18,4 jt</div><div class="sub up">▲ 12%</div></div>
-        <div class="card"><div class="lbl">Modal bahan (HPP)</div><div class="val">Rp 6,1 jt</div><div class="sub" style="color:var(--muted)">33% dari penjualan</div></div>
-        <div class="card"><div class="lbl">Estimasi margin</div><div class="val up">Rp 12,3 jt</div><div class="sub up">67%</div></div>
-        <div class="card"><div class="lbl">Bahan paling boros</div><div class="val" style="font-size:18px">Kawat bulu</div><div class="sub" style="color:var(--muted)">3.060 pcs terpakai</div></div>
-      </div>
-      <div class="panel">
-        <h3>Pemakaian bahan — Juni 2026 <span class="tag">otomatis dari resep × penjualan</span></h3>
-        <table>
-          <tr><th>Bahan</th><th>Terpakai</th><th>Dari produk</th><th>Estimasi biaya</th></tr>
-          <tr><td>Kawat bulu</td><td>3.060 pcs</td><td>Mawar, Bouquet S/M</td><td>Rp 459.000</td></tr>
-          <tr><td>Tangkai</td><td>340 pcs</td><td>Semua bouquet</td><td>Rp 170.000</td></tr>
-          <tr><td>Cellophane</td><td>85 lembar</td><td>Bouquet S/M, Box</td><td>Rp 102.000</td></tr>
-          <tr><td>Pita satin</td><td>62 meter</td><td>Bouquet, Papan</td><td>Rp 155.000</td></tr>
-        </table>
-        <div class="note">💡 Laporan ini menggantikan rekap pivot manual — semua dihitung sistem dari resep tiap produk.</div>
-      </div>
-    </section>
+    <section id="dash" class="screen show"></section>
+    <section id="jual" class="screen"></section>
+    <section id="resep" class="screen"></section>
+    <section id="bahan" class="screen"></section>
+    <section id="lapor" class="screen"></section>
   </main>
 </div>
-<!-- Modal -->
+
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="head"><h3 id="mTitle">Tambah</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="body" id="mBody"></div>
     <div class="foot">
       <button class="btn ghost" onclick="closeModal()">Batal</button>
-      <button class="btn primary" onclick="submitModal()" id="mSave">Simpan</button>
+      <button class="btn primary" id="mSave" onclick="submitModal()">Simpan</button>
     </div>
   </div>
 </div>
-
-<div class="toast" id="toast">✓ Penjualan tersimpan — stok bahan terpotong otomatis!</div>
+<div class="toast" id="toast"></div>
 
 <script>
-  const data = {
-    mawar:{name:'Mawar satuan', items:[['🧵 Kawat bulu',9,'pcs'],['🌿 Tangkai',1,'pcs']], nest:'Produk sederhana — langsung potong bahan mentah.'},
-    bs:{name:'Bouquet S', items:[['🧵 Kawat bulu',45,'pcs'],['🌿 Tangkai',5,'pcs'],['📄 Kertas tisu',2,'lembar'],['✨ Cellophane',1,'lembar'],['🥢 Stik',3,'pcs'],['🎀 Pita satin',1,'meter']], nest:'🔁 Termasuk resep bertingkat: 5× Mawar = 45 kawat bulu + 5 tangkai, lalu ditambah bahan pembungkus.'},
-    bm:{name:'Bouquet M', items:[['🧵 Kawat bulu',90,'pcs'],['🌿 Tangkai',10,'pcs'],['📄 Kertas tisu',4,'lembar'],['✨ Cellophane',2,'lembar'],['🎀 Pita satin',2,'meter']], nest:'🔁 10× Mawar = 90 kawat bulu + 10 tangkai + pembungkus.'},
-    box:{name:'Box Bunga', items:[['🌹 Mawar fresh',12,'tangkai'],['✨ Cellophane',1,'lembar'],['📦 Box karton',1,'pcs'],['🎀 Pita satin',1,'meter']], nest:'Memakai bunga fresh + box.'},
-    tulip:{name:'Tulip satuan', items:[['🌷 Tulip fresh',1,'tangkai'],['🌿 Tangkai',1,'pcs']], nest:'Produk sederhana.'},
-    papan:{name:'Papan Bunga', items:[['🌹 Mawar fresh',40,'tangkai'],['🪵 Rangka papan',1,'pcs'],['🌿 Daun pakis',15,'ikat'],['🎀 Pita satin',5,'meter']], nest:'Produk besar — banyak bahan terpotong sekaligus.'}
-  };
-  let cur='bs', qty=1;
-  function go(id,btn){
-    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
-    document.getElementById(id).classList.add('show');
-    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    window.scrollTo(0,0);
-  }
-  function pick(k,el){cur=k;document.querySelectorAll('.prod').forEach(p=>p.classList.remove('sel'));el.classList.add('sel');render();}
-  function qstep(d){qty=Math.max(1,qty+d);document.getElementById('qty').value=qty;render();}
-  function render(){
-    const d=data[cur];
-    document.getElementById('pname').textContent=d.name+(qty>1?' × '+qty:'');
-    const box=document.getElementById('deduct');
-    box.innerHTML=d.items.map(i=>`<div class="row"><span>${i[0]}</span><span class="neg">− ${i[1]*qty} ${i[2]}</span></div>`).join('');
-    document.getElementById('nestnote').textContent=d.nest;
-  }
-  function saveSale(){toast('✓ Penjualan tersimpan — stok bahan terpotong otomatis!');}
-  function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
-  render();
+/* ============ STATE & PERSISTENCE ============ */
+const KEY='floristock_v1';
+let db, curView='dash', selProd=null, saleQty=1, viewProd=null, recipeDraft=[];
 
-  // ===== Modal (Bahan / Produk / Beli) =====
-  let modalType=null;
-  function f(label,id,ph,type){return `<div class="field"><label>${label}</label><input id="${id}" placeholder="${ph||''}" ${type==='num'?'type="number"':''}></div>`;}
-  const forms={
-    bahan:{title:'🧵 Tambah Bahan Baru', save:'Simpan Bahan', html:
-      f('Nama bahan','b_nama','mis. Kawat bulu')+
-      `<div class="row2">${f('Satuan','b_sat','pcs / lembar / meter')}${f('Stok awal','b_stok','0','num')}</div>`+
-      `<div class="row2">${f('Titik pesan ulang','b_rop','0','num')}${f('Harga beli (Rp)','b_harga','0','num')}</div>`+
-      f('Supplier (opsional)','b_sup','mis. Toko Grosir Bunga')},
-    produk:{title:'💐 Tambah Produk Baru', save:'Simpan Produk', html:
-      f('Nama produk','p_nama','mis. Bouquet L')+
-      `<div class="row2">${f('Harga jual (Rp)','p_harga','0','num')}${f('Tipe','p_tipe','produk / bundel')}</div>`+
-      `<div class="note">Setelah disimpan, kamu bisa susun resep (bahan penyusun) produk ini.</div>`},
-    beli:{title:'🛒 Catat Pembelian / Restock', save:'Tambah Stok', html:''}
-  };
-  function openModal(type,bahanName){
-    modalType=type;const cfg=forms[type];
-    document.getElementById('mTitle').textContent=cfg.title;
-    document.getElementById('mSave').textContent=cfg.save;
-    let html=cfg.html;
-    if(type==='beli'){
-      html=f('Bahan','r_nama','')+`<div class="row2">${f('Jumlah masuk','r_qty','0','num')}${f('Total biaya (Rp)','r_biaya','0','num')}</div>`+f('Supplier (opsional)','r_sup','');
-    }
-    document.getElementById('mBody').innerHTML=html;
-    document.getElementById('overlay').classList.add('show');
-    if(type==='beli'&&bahanName){document.getElementById('r_nama').value=bahanName;}
+function seed(){return {
+  bahan:[
+    {id:'b1',nama:'Kawat bulu',emoji:'🧵',satuan:'pcs',stok:600,rop:500,harga:150},
+    {id:'b2',nama:'Tangkai',emoji:'🌿',satuan:'pcs',stok:340,rop:100,harga:500},
+    {id:'b3',nama:'Kertas tisu',emoji:'📄',satuan:'lembar',stok:80,rop:50,harga:800},
+    {id:'b4',nama:'Cellophane',emoji:'✨',satuan:'lembar',stok:60,rop:40,harga:1200},
+    {id:'b5',nama:'Stik',emoji:'🥢',satuan:'pcs',stok:210,rop:80,harga:300},
+    {id:'b6',nama:'Pita satin',emoji:'🎀',satuan:'meter',stok:50,rop:20,harga:2500},
+    {id:'b7',nama:'Mawar fresh',emoji:'🌹',satuan:'tangkai',stok:180,rop:60,harga:4000}
+  ],
+  produk:[
+    {id:'p1',nama:'Mawar satuan',emoji:'🌹',harga:25000,resep:[{tipe:'bahan',ref:'b1',qty:9},{tipe:'bahan',ref:'b2',qty:1}]},
+    {id:'p2',nama:'Bouquet S',emoji:'💐',harga:150000,resep:[{tipe:'produk',ref:'p1',qty:5},{tipe:'bahan',ref:'b3',qty:2},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b5',qty:3},{tipe:'bahan',ref:'b6',qty:1}]},
+    {id:'p3',nama:'Bouquet M',emoji:'🌸',harga:275000,resep:[{tipe:'produk',ref:'p1',qty:10},{tipe:'bahan',ref:'b3',qty:4},{tipe:'bahan',ref:'b4',qty:2},{tipe:'bahan',ref:'b6',qty:2}]},
+    {id:'p4',nama:'Box Bunga',emoji:'🎁',harga:320000,resep:[{tipe:'bahan',ref:'b7',qty:12},{tipe:'bahan',ref:'b4',qty:1},{tipe:'bahan',ref:'b6',qty:1}]}
+  ],
+  jual:[]
+};}
+
+function load(){try{db=JSON.parse(localStorage.getItem(KEY))||seed();}catch(e){db=seed();} if(!db.bahan){db=seed();}}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+function resetData(){if(confirm('Kembalikan ke data contoh? Semua perubahan terhapus.')){db=seed();save();selProd=null;viewProd=null;renderAll();toast('Data dikembalikan ke contoh.');}}
+
+/* ============ HELPERS ============ */
+const rp=n=>'Rp '+Number(Math.round(n)).toLocaleString('id-ID');
+const getB=id=>db.bahan.find(b=>b.id===id);
+const getP=id=>db.produk.find(p=>p.id===id);
+const uid=p=>p+Math.random().toString(36).slice(2,7);
+function statusOf(b){if(b.stok<=b.rop*0.5)return['crit','Kritis'];if(b.stok<=b.rop)return['low','Menipis'];return['ok','Aman'];}
+
+/* Recursive BOM explosion -> {bahanId: totalQty} */
+function explode(prodId,mult,acc,guard){acc=acc||{};guard=guard||{};
+  if(guard[prodId])return acc; guard[prodId]=1;
+  const p=getP(prodId); if(!p)return acc;
+  p.resep.forEach(r=>{
+    if(r.tipe==='bahan'){acc[r.ref]=(acc[r.ref]||0)+r.qty*mult;}
+    else{explode(r.ref,r.qty*mult,acc,Object.assign({},guard));}
+  });
+  return acc;
+}
+function hpp(prodId){const m=explode(prodId,1);return Object.keys(m).reduce((s,id)=>s+(getB(id)?getB(id).harga*m[id]:0),0);}
+
+/* ============ NAV ============ */
+function go(v,btn){curView=v;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  document.getElementById(v).classList.add('show');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.s===v));
+  if(window.innerWidth<=760)closeNav();
+  window.scrollTo(0,0); renderAll();
+}
+function toggleNav(){const s=document.getElementById('sidebar');s.classList.toggle('open');document.getElementById('backdrop').classList.toggle('show',s.classList.contains('open'));}
+function closeNav(){document.getElementById('sidebar').classList.remove('open');document.getElementById('backdrop').classList.remove('show');}
+
+/* ============ RENDER ============ */
+function renderAll(){renderDash();renderJual();renderResep();renderBahan();renderLapor();}
+
+function renderDash(){
+  const today=new Date().toDateString();
+  const todaySales=db.jual.filter(s=>new Date(s.ts).toDateString()===today);
+  const omzetHari=todaySales.reduce((s,x)=>s+x.total,0);
+  const qtyHari=todaySales.reduce((s,x)=>s+x.qty,0);
+  const low=db.bahan.filter(b=>b.stok<=b.rop);
+  const terlaris=[...db.produk].map(p=>({p,t:db.jual.filter(s=>s.prod===p.id).reduce((a,x)=>a+x.qty,0)})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t).slice(0,5);
+  document.getElementById('dash').innerHTML=`
+    <div class="topbar">
+      <div><h1>Selamat datang, Kak 🌷</h1><p>Ringkasan toko hari ini — ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p></div>
+      <div class="userchip"><div class="avatar">F</div><div><b style="font-size:13px">Toko Bunga Melati</b><br><small style="color:var(--muted)">Admin</small></div></div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="lbl">🛒 Penjualan hari ini</div><div class="val">${rp(omzetHari)}</div><div class="sub">${todaySales.length} transaksi</div></div>
+      <div class="card"><div class="lbl">📦 Produk terjual</div><div class="val">${qtyHari}</div><div class="sub">hari ini</div></div>
+      <div class="card"><div class="lbl">🧵 Jenis bahan</div><div class="val">${db.bahan.length}</div><div class="sub">dipantau</div></div>
+      <div class="card"><div class="lbl">⚠️ Bahan menipis</div><div class="val" style="color:${low.length?'var(--amber)':'var(--green)'}">${low.length}</div><div class="sub">${low.length?'perlu dibeli':'semua aman'}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Bahan perlu restock <span class="tag">≤ titik pesan ulang</span></h3>
+        <div class="table-wrap"><table><tr><th>Bahan</th><th>Sisa</th><th>Status</th><th></th></tr>
+        ${low.length?low.map(b=>{const[c,t]=statusOf(b);const pct=Math.min(100,Math.round(b.stok/(b.rop*2)*100));return `<tr><td>${b.emoji} ${b.nama}</td><td>${b.stok} ${b.satuan}<div class="bar"><i style="width:${pct}%;background:var(--${c==='crit'?'red':'amber'})"></i></div></td><td><span class="pill ${c}">${t}</span></td><td><button class="btn ghost sm" onclick="openModal('beli','${b.id}')">+ Beli</button></td></tr>`;}).join(''):'<tr><td colspan="4" class="empty">Semua bahan aman 🎉</td></tr>'}
+        </table></div>
+      </div>
+      <div class="panel">
+        <h3>Produk terlaris</h3>
+        <div class="table-wrap"><table><tr><th>Produk</th><th>Terjual</th></tr>
+        ${terlaris.length?terlaris.map(x=>`<tr><td>${x.p.emoji} ${x.p.nama}</td><td><b>${x.t}</b></td></tr>`).join(''):'<tr><td colspan="2" class="empty">Belum ada penjualan. Coba di menu Input Penjualan →</td></tr>'}
+        </table></div>
+        <div class="note">💡 Otomatis dihitung dari transaksi penjualan.</div>
+      </div>
+    </div>`;
+}
+
+function renderJual(){
+  if(!selProd&&db.produk.length)selProd=db.produk[0].id;
+  const prods=db.produk.map(p=>`<div class="prod ${p.id===selProd?'sel':''}" onclick="pick('${p.id}')"><div class="emo">${p.emoji}</div><div class="nm">${p.nama}</div><div class="pr">${rp(p.harga)}</div></div>`).join('');
+  let preview='<div class="empty">Belum ada produk. Buat dulu di menu Produk & Resep.</div>', nameTxt='';
+  if(selProd){const p=getP(selProd);nameTxt=p.nama+(saleQty>1?' × '+saleQty:'');
+    const m=explode(selProd,saleQty);
+    preview=Object.keys(m).map(id=>{const b=getB(id);const sisa=b.stok-m[id];const sh=sisa<0;return `<div class="row"><span>${b.emoji} ${b.nama}</span><span class="${sh?'short':'neg'}">− ${m[id]} ${b.satuan}${sh?' ⚠️ kurang':''}</span></div>`;}).join('');
   }
-  function closeModal(){document.getElementById('overlay').classList.remove('show');}
-  function submitModal(){
-    if(modalType==='bahan'){
-      const nama=val('b_nama')||'Bahan baru', sat=val('b_sat')||'pcs', stok=val('b_stok')||'0', rop=val('b_rop')||'0', harga=val('b_harga')||'0';
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>🆕 ${nama}</td><td>${sat}</td><td><b>${stok}</b></td><td>${rop}</td><td>Rp ${Number(harga).toLocaleString('id-ID')}</td><td><span class="pill ok">Aman</span></td>`;
-      document.getElementById('bahanTable').appendChild(tr);
-      tr.style.background='var(--green-bg)';setTimeout(()=>tr.style.background='',1200);
-      toast('✓ Bahan "'+nama+'" ditambahkan ke stok!');
-    } else if(modalType==='produk'){
-      toast('✓ Produk "'+(val('p_nama')||'baru')+'" dibuat — lanjut susun resep!');
-    } else if(modalType==='beli'){
-      toast('✓ Stok "'+(val('r_nama')||'bahan')+'" bertambah '+(val('r_qty')||0)+' — sisa stok ter-update!');
-    }
-    closeModal();
+  document.getElementById('jual').innerHTML=`
+    <div class="topbar"><div><h1>Input Penjualan</h1><p>Pilih produk → jumlah → simpan. Stok bahan terpotong otomatis.</p></div></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>1 · Pilih produk</h3>
+        <div class="prodgrid">${prods||'<div class="empty">Belum ada produk.</div>'}</div>
+        <div class="field" style="margin-top:18px"><label>2 · Jumlah</label>
+          <div class="qty"><button onclick="qstep(-1)">−</button><input id="qtyIn" value="${saleQty}" readonly><button onclick="qstep(1)">+</button></div>
+        </div>
+        <button class="btn primary" style="width:100%" onclick="saveSale()" ${selProd?'':'disabled'}>✓ Simpan Penjualan</button>
+      </div>
+      <div class="panel">
+        <h3>Pratinjau potong stok <span class="badge-auto">OTOMATIS</span></h3>
+        <p style="color:var(--muted);font-size:12.5px;margin-bottom:8px">Bahan yang akan berkurang dari <b>${nameTxt}</b> (termasuk resep bertingkat):</p>
+        <div class="deduct">${preview}</div>
+      </div>
+    </div>`;
+}
+function pick(id){selProd=id;renderJual();}
+function qstep(d){saleQty=Math.max(1,saleQty+d);renderJual();}
+function saveSale(){
+  const p=getP(selProd); if(!p)return;
+  const m=explode(selProd,saleQty);
+  const kurang=Object.keys(m).filter(id=>getB(id).stok-m[id]<0);
+  if(kurang.length){toast('Stok tidak cukup: '+kurang.map(id=>getB(id).nama).join(', '),true);return;}
+  Object.keys(m).forEach(id=>{getB(id).stok-=m[id];});
+  db.jual.push({id:uid('s'),ts:Date.now(),prod:selProd,qty:saleQty,total:p.harga*saleQty});
+  save();const n=saleQty;saleQty=1;renderAll();
+  toast('✓ Terjual '+n+'× '+p.nama+' — stok bahan terpotong otomatis!');
+}
+
+function renderResep(){
+  if((!viewProd||!getP(viewProd))&&db.produk.length)viewProd=db.produk[0].id;
+  const chips=db.produk.map(p=>`<button class="btn ${p.id===viewProd?'primary':'ghost'} sm" onclick="viewProd='${p.id}';renderResep()">${p.emoji} ${p.nama}</button>`).join(' ');
+  let detail='<div class="empty">Belum ada produk. Klik “+ Produk Baru”.</div>';
+  if(viewProd){const p=getP(viewProd);
+    const rows=p.resep.map((r,i)=>{
+      if(r.tipe==='bahan'){const b=getB(r.ref);return `<div class="recipe-row"><span style="font-size:18px">${b?b.emoji:'❓'}</span><span class="nm"><b>${b?b.nama:'(dihapus)'}</b></span><span><b>${r.qty}</b> ${b?b.satuan:''}</span><button class="del" onclick="delRecipe('${p.id}',${i})" style="background:var(--red-bg);color:var(--red);border:0;border-radius:9px;width:34px;height:34px;cursor:pointer">×</button></div>`;}
+      const sp=getP(r.ref);let nested='';
+      if(sp){const m=explode(r.ref,r.qty);nested=Object.keys(m).map(id=>{const b=getB(id);return `<div class="recipe-row nest"><span>↳ ${b.emoji}</span><span class="nm">${b.nama}</span><span><b>${m[id]}</b> ${b.satuan}</span></div>`;}).join('');}
+      return `<div class="recipe-row"><span style="font-size:18px">${sp?sp.emoji:'❓'}</span><span class="nm"><b>${sp?sp.nama:'(dihapus)'}</b> <small style="color:var(--muted)">(produk)</small></span><span><b>${r.qty}</b> unit</span><button class="del" onclick="delRecipe('${p.id}',${i})" style="background:var(--red-bg);color:var(--red);border:0;border-radius:9px;width:34px;height:34px;cursor:pointer">×</button></div>`+nested;
+    }).join('');
+    detail=`<span class="hint">📋 Resep: <b>${p.emoji} ${p.nama}</b> — ${rp(p.harga)} · Modal bahan ≈ ${rp(hpp(p.id))}</span>
+      <h3>Resep penyusun <span class="tag">${p.resep.length} komponen</span></h3>
+      ${rows||'<div class="empty">Belum ada bahan di resep ini.</div>'}
+      <button class="btn ghost sm" style="margin-top:8px" onclick="openModal('reseprow','${p.id}')">+ Tambah ke resep</button>
+      <div class="note">🔁 Resep bertingkat didukung: produk bisa berisi produk lain. Saat dijual, semua bahan mentah (termasuk yang nested) otomatis dipotong dari stok.</div>`;
   }
-  function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
-  document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal();});
+  document.getElementById('resep').innerHTML=`
+    <div class="topbar"><div><h1>Produk &amp; Resep (BOM)</h1><p>Atur sekali, dipakai selamanya.</p></div><button class="btn primary" onclick="openModal('produk')">+ Produk Baru</button></div>
+    <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">${chips||'<span class="empty">Belum ada produk.</span>'}</div>
+    <div class="panel">${detail}</div>`;
+}
+function delRecipe(pid,i){const p=getP(pid);p.resep.splice(i,1);save();renderResep();toast('Komponen resep dihapus.');}
+
+function renderBahan(){
+  const rows=db.bahan.map(b=>{const[c,t]=statusOf(b);return `<tr><td>${b.emoji} ${b.nama}</td><td>${b.satuan}</td><td><b>${b.stok}</b></td><td>${b.rop}</td><td>${rp(b.harga)}</td><td><span class="pill ${c}">${t}</span></td>
+    <td style="white-space:nowrap"><button class="btn ghost sm" onclick="openModal('beli','${b.id}')">+ Beli</button> <button class="btn ghost sm" onclick="openModal('adjust','${b.id}')">Koreksi</button></td></tr>`;}).join('');
+  document.getElementById('bahan').innerHTML=`
+    <div class="topbar"><div><h1>Stok Bahan</h1><p>Sisa stok real-time, otomatis ter-update tiap penjualan & pembelian.</p></div><button class="btn primary" onclick="openModal('bahan')">+ Bahan Baru</button></div>
+    <div class="panel"><div class="table-wrap"><table><tr><th>Bahan</th><th>Satuan</th><th>Sisa</th><th>Pesan ulang</th><th>Harga beli</th><th>Status</th><th></th></tr>
+    ${rows||'<tr><td colspan="7" class="empty">Belum ada bahan.</td></tr>'}</table></div></div>`;
+}
+
+function renderLapor(){
+  const omzet=db.jual.reduce((s,x)=>s+x.total,0);
+  const usage={}; db.jual.forEach(s=>{const m=explode(s.prod,s.qty);Object.keys(m).forEach(id=>usage[id]=(usage[id]||0)+m[id]);});
+  const modal=Object.keys(usage).reduce((s,id)=>s+(getB(id)?getB(id).harga*usage[id]:0),0);
+  const usageRows=Object.keys(usage).sort((a,b)=>usage[b]-usage[a]).map(id=>{const b=getB(id);return `<tr><td>${b.emoji} ${b.nama}</td><td>${usage[id]} ${b.satuan}</td><td>${rp(b.harga*usage[id])}</td></tr>`;}).join('');
+  const boros=Object.keys(usage).sort((a,b)=>usage[b]-usage[a])[0];
+  document.getElementById('lapor').innerHTML=`
+    <div class="topbar"><div><h1>Laporan</h1><p>Dihitung otomatis dari seluruh transaksi penjualan.</p></div></div>
+    <div class="cards">
+      <div class="card"><div class="lbl">Total penjualan</div><div class="val">${rp(omzet)}</div><div class="sub">${db.jual.length} transaksi</div></div>
+      <div class="card"><div class="lbl">Modal bahan (HPP)</div><div class="val">${rp(modal)}</div><div class="sub">${omzet?Math.round(modal/omzet*100):0}% dari penjualan</div></div>
+      <div class="card"><div class="lbl">Estimasi margin</div><div class="val" style="color:var(--green)">${rp(omzet-modal)}</div><div class="sub">${omzet?Math.round((omzet-modal)/omzet*100):0}%</div></div>
+      <div class="card"><div class="lbl">Bahan paling boros</div><div class="val" style="font-size:16px">${boros?getB(boros).nama:'-'}</div><div class="sub">${boros?usage[boros]+' '+getB(boros).satuan:'belum ada'}</div></div>
+    </div>
+    <div class="panel"><h3>Pemakaian bahan <span class="tag">otomatis dari resep × penjualan</span></h3>
+      <div class="table-wrap"><table><tr><th>Bahan</th><th>Terpakai</th><th>Estimasi biaya</th></tr>
+      ${usageRows||'<tr><td colspan="3" class="empty">Belum ada penjualan tercatat.</td></tr>'}</table></div>
+      <div class="note">💡 Laporan ini menggantikan rekap pivot manual — semua dihitung dari resep tiap produk.</div></div>`;
+}
+
+/* ============ MODAL ============ */
+let modalType=null,modalRef=null;
+function fld(label,id,ph,type,val){return `<div class="field"><label>${label}</label><input id="${id}" placeholder="${ph||''}" ${type==='num'?'type="number" inputmode="numeric"':''} value="${val||''}"></div>`;}
+function openModal(type,ref){modalType=type;modalRef=ref||null;
+  let title='Tambah',save='Simpan',html='';
+  if(type==='bahan'){title='🧵 Tambah Bahan Baru';
+    html=fld('Nama bahan','f_nama','mis. Kawat bulu')+fld('Emoji (opsional)','f_emoji','🧵')+
+      `<div class="row2">${fld('Satuan','f_sat','pcs / lembar / meter')}${fld('Stok awal','f_stok','0','num')}</div>`+
+      `<div class="row2">${fld('Titik pesan ulang','f_rop','0','num')}${fld('Harga beli (Rp)','f_harga','0','num')}</div>`;
+  }else if(type==='produk'){title='💐 Tambah Produk Baru';
+    html=fld('Nama produk','f_nama','mis. Bouquet L')+fld('Emoji (opsional)','f_emoji','💐')+fld('Harga jual (Rp)','f_harga','0','num')+
+      `<div class="note">Setelah disimpan, pilih produk lalu tambahkan bahan ke resepnya.</div>`;
+  }else if(type==='beli'){title='🛒 Restock / Tambah Stok';const b=getB(ref);
+    html=`<div class="field"><label>Bahan</label><input value="${b?b.emoji+' '+b.nama:''}" readonly></div>`+
+      `<div class="row2">${fld('Jumlah masuk','f_qty','0','num')}${fld('Total biaya (Rp, opsional)','f_biaya','0','num')}</div>`+
+      `<div class="note">Stok saat ini: <b>${b?b.stok+' '+b.satuan:''}</b></div>`;save='Tambah Stok';
+  }else if(type==='adjust'){title='✏️ Koreksi Stok';const b=getB(ref);
+    html=`<div class="field"><label>Bahan</label><input value="${b?b.emoji+' '+b.nama:''}" readonly></div>`+
+      fld('Stok fisik sebenarnya','f_real',b?String(b.stok):'0','num',b?b.stok:'')+
+      `<div class="note">Untuk barang rusak/hilang atau hasil stock opname. Stok sistem sekarang: <b>${b?b.stok:''}</b></div>`;save='Simpan Koreksi';
+  }else if(type==='reseprow'){title='➕ Tambah ke Resep';
+    const opts=db.bahan.map(b=>`<option value="bahan:${b.id}">${b.emoji} ${b.nama} (bahan)</option>`).join('')+
+      db.produk.filter(p=>p.id!==ref).map(p=>`<option value="produk:${p.id}">${p.emoji} ${p.nama} (produk)</option>`).join('');
+    html=`<div class="field"><label>Komponen</label><select id="f_komp">${opts}</select></div>`+fld('Jumlah per 1 produk','f_qty','1','num','1');save='Tambah';
+  }
+  document.getElementById('mTitle').textContent=title;
+  document.getElementById('mSave').textContent=save;
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('show');}
+function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function submitModal(){
+  if(modalType==='bahan'){
+    if(!v('f_nama')){toast('Nama bahan wajib diisi.',true);return;}
+    db.bahan.push({id:uid('b'),nama:v('f_nama'),emoji:v('f_emoji')||'📦',satuan:v('f_sat')||'pcs',stok:+v('f_stok')||0,rop:+v('f_rop')||0,harga:+v('f_harga')||0});
+    save();toast('✓ Bahan "'+v('f_nama')+'" ditambahkan!');
+  }else if(modalType==='produk'){
+    if(!v('f_nama')){toast('Nama produk wajib diisi.',true);return;}
+    const id=uid('p');db.produk.push({id,nama:v('f_nama'),emoji:v('f_emoji')||'💐',harga:+v('f_harga')||0,resep:[]});
+    viewProd=id;save();toast('✓ Produk "'+v('f_nama')+'" dibuat — tambahkan resepnya!');
+  }else if(modalType==='beli'){
+    const b=getB(modalRef);const q=+v('f_qty')||0;if(q<=0){toast('Jumlah harus > 0.',true);return;}
+    b.stok+=q;save();toast('✓ Stok '+b.nama+' +'+q+' → sekarang '+b.stok+' '+b.satuan);
+  }else if(modalType==='adjust'){
+    const b=getB(modalRef);b.stok=+v('f_real')||0;save();toast('✓ Stok '+b.nama+' dikoreksi → '+b.stok+' '+b.satuan);
+  }else if(modalType==='reseprow'){
+    const[tipe,ref]=v('f_komp').split(':');const q=+v('f_qty')||1;
+    getP(modalRef).resep.push({tipe,ref,qty:q});save();toast('✓ Komponen ditambahkan ke resep.');
+  }
+  closeModal();renderAll();
+}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal();});
+
+function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',err?3200:2600);}
+
+/* ============ INIT ============ */
+load();renderAll();
 </script>
 </body>
 </html>
